@@ -3,13 +3,31 @@
 """Console script for toxic_sentiment."""
 import sys
 import click
-from toxic_sentiment.toxic_sentiment import func1
+from toxic_sentiment.data_processors import ToxicDataset, Embedding
+from logging.config import fileConfig
+
+fileConfig('logging.ini')
 
 
-@click.command()
+@click.group()
 def main(args=None):
     """console script for toxic_sentiment."""
     click.echo("Hello, what would you like to search for?")
+    return 0
+
+@main.command()
+@click.option('-p', '--path', type=str)
+def setup(path: str):
+    try:
+        glove_embedder = Embedding()
+        glove_embedder.download_emb(path)
+    except Exception as exc:
+        click.secho(str(exc), fg='red', err=True)
+    return 0
+
+@main.command()
+def get_data():
+    toxic_dataset = ToxicDataset('')
     return 0
 
 
