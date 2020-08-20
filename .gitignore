@@ -1,0 +1,96 @@
+#byte compiled / optimized / DLL Files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extentions
+*._so
+
+# Distribution packaging
+.Python
+data/
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test/ coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff
+*.log
+local_settings.py
+
+# Flask stuff
+instance/
+.webassets-cache
+
+# scrapy
+.scrapy
+
+# Sphinx Doc
+docs/_build/
+
+# Pybuilder
+target/
+
+# Notebooks
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# celery beat schedule file
+celerybeat-schedule
+
+# dot-env
+!/repo_create/data/fastapi/**/backend/.env
+.env
+
+# virtualenv
+venv/
+ENV/
+
+.#*
+*.pyc
+.idea/
+
+.pylintrc
+.pytest_cache
+*.swp
+.DS_Store
+.vscode/
+~*
+
+cookiecutter.json
