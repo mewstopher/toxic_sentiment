@@ -7,9 +7,9 @@ class BasicLstm(nn.Module):
     def __init__(self, embeddings, num_lstm_units, device, frozen=True, freeze_embeddings=True):
         super(BasicLstm, self).__init__()
         self.device = device
-        self.embeddings = nn.Embedding.from_pretrained(torch.from_numpy(
-            embeddings, freeze=freeze_embeddings
-        ))
+        self.embeddings = nn.Embedding.from_pretrained(
+            torch.from_numpy(embeddings),
+            freeze=freeze_embeddings)
         self.num_lstm_units = num_lstm_units
         self.embeddings_dim = embeddings.shape[1]
         self.bilstm = nn.LSTM(input_size=self.embeddings_dim,

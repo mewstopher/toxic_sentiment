@@ -20,7 +20,6 @@ class Session:
         self.save = save
         self.save_path = save_path
 
-
     def user_input(self, custom_input):
         """
         decide whether or not to use custom user input
@@ -36,12 +35,37 @@ class Session:
                              'tran/val/test split: {}, {}, {}'
                              )
             self.logger.info('To change this, use the --custom option')
+        else:
+            self.logger.info('using .ENV for hyperparameters.')
 
     def save_choice(self, save, save_path):
         if not save:
             self.logger.info("you have chosen not to save the model")
         elif save and save_path:
             self.logger.info("saving model at: {}".format(save_path))
+
+    def train_epoch(self):
+        for data_sample in train_dataloader:
+            for i in range(len(data_sample)):
+                data_sample[i] = data_sample[i].to(device)
+            count += 1
+            model.zero_grad()
+            out = self.model(data_sample[0])
+            loss = self.Loss(out, data_sample[1].float())
+
+            loss.backward()
+            optimizer.step()
+            self.losses[epoch].append(loss.item())
+
+            predicted = torch.round(out)
+            total += data_sample[1].size(0) * data_sample[1].size(1)
+            correct += (predicted == data_sample[1]).sum().item()
+            accuracy = correct / total
+            self.accuracies[epoch].append(accuracy)
+
+            if count % 50 == 0:
+                self.logger.info("loss: {} (at iteration {})".format(np.mean(losses[epoch]), count))
+                self.logger.info("accuracy: {} (at iteration {})".format(np.mean(accuracies[epoch]), count))
 
     def train(self, train_dataloader):
         self.logger.info("beginning to train the machine")
@@ -51,27 +75,7 @@ class Session:
         for epoch in range(self.num_epochs):
             self.losses[epoch] = []
             self.accuracies[epoch] = []
-            for data_sample in train_dataloader:
-                for i in range(len(data_sample)):
-                    data_sample[i] = data_sample[i].to(device)
-                count += 1
-                model.zero_grad()
-                out = self.model(data_sample[0])
-                loss = self.Loss(out, data_sample[1].float())
 
-                loss.backward()
-                optimizer.step()
-                self.losses[epoch].append(loss.item())
-
-                predicted = torch.round(out)
-                total += data_sample[1].size(0) * data_sample[1].size(1)
-                correct += (predicted == data_sample[1]).sum().item()
-                accuracy = correct/total
-                self.accuracies[epoch].append(accuracy)
-
-                if count % 50 == 0:
-                    self.logger.info("loss: {} (at iteration {})".format(np.mean(losses[epoch]), count))
-                    self.logger.info("accuracy: {} (at iteration {})".format(np.mean(accuracies[epoch]), count))
             toxic_eval = ToxicEvaluation(model, val_dataloader, device)
             val_accuracy = toxic_eval.correct/toxic_eval.total
             self.logger.info("accuracy for validation set: {}".format(val_accuracy))
