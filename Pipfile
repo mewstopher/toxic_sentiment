@@ -13,6 +13,7 @@ toxic-sentiment = {editable = true,path = "."}
 torch = "*"
 pandas = "*"
 ipykernel = "*"
+numpy = "*"
 
 [requires]
 python_version = "3.8"

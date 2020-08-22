@@ -26,8 +26,10 @@ def setup(path: str):
     return 0
 
 @main.command()
-def get_data():
-    toxic_dataset = ToxicDataset('')
+@click.argument('data_path', type=str)
+@click.argument('glove_path', type=str)
+def get_data(data_path, glove_path):
+    toxic_dataset = ToxicDataset(data_path, glove_path)
     return 0
 
 

@@ -4,3 +4,7 @@ class ScriptPathError(Exception):
 
 class ScriptError(ScriptPathError):
     pass
+
+
+class PathError(Exception):
+    pass
