@@ -1,9 +1,11 @@
 from toxic_sentiment.data_processors.functions import tokenize_content, clean_special_char, tokenize_sample
 from toxic_sentiment.exceptions import ScriptPathError, ScriptError, PathError
 from torch.utils.data import Dataset
+from decouple import config
 from pathlib import Path
 from enum import Enum
 import pkg_resources
+from torch import nn
 import pandas as pd
 import numpy as np
 import subprocess
@@ -15,23 +17,25 @@ import json
 class Constants(Enum):
     GLOVE_SCRIPT = 'scripts/get_embeddings.sh'
     UNK_WORD = 'unknown word'
+    TEXT_COL = 'comment_text'
 
 
 class ToxicDataset(Dataset):
 
-    def __init__(self, data_csv_path: str, text_col: str, glove_path: str,
-                 vocab_path="../"):
+    def __init__(self, data_csv_path: str, glove_path: str):
         self.logger = logging.getLogger(__name__)
         self.logger.debug(f"{__name__} entered")
         self.df = pd.read_csv(data_csv_path)
-        self.text_col = text_col
+        self.text_col = Constants.TEXT_COL.value
         self.unknown_words = []
+        self.unk_index = None
         self.word_count = 0
-        self.vocab_path = self.get_vocab_path(vocab_path)
         self.word_dicts = self.read_glove_vecs(glove_path)
+        self.vocab = None
         self.embeddings = self.get_initial_emb_dim()
         self.unk_encountered = False
         self.build_vocab()
+        self.max_text_len = len(max(self.df.comment_text))
 
     def get_initial_emb_dim(self):
         """
@@ -40,19 +44,6 @@ class ToxicDataset(Dataset):
         emb_dim = np.int(self.word_dicts['word_to_vec_map']['fox'].shape[0])
         emb_dim_vector = np.zeros(emb_dim, )
         return emb_dim_vector
-
-    def get_vocab_path(self, path_to_vocab):
-        """
-        checks if path for vocab vectors to be stored
-        is a valid directory
-
-        """
-        v_path = Path(path_to_vocab).is_dir()
-        if not v_path:
-            self.logger.error('{} is not a valid directory.'.format(v_path))
-            raise PathError
-        self.logger.debug('Using path: {} for vocab path'.format(v_path))
-        return v_path
 
     def read_glove_vecs(self, glove_path: str) -> dict:
         """
@@ -68,7 +59,7 @@ class ToxicDataset(Dataset):
         glove_path: str
             path/to/glove/embeddings.txt
         """
-        self.logger.debug('Creating word dictionaries')
+        self.logger.info('Creating word dictionaries')
         word_dicts = {}
         with open(glove_path, 'r') as f:
             words = set()
@@ -86,13 +77,23 @@ class ToxicDataset(Dataset):
                 word_dicts['word_to_index'][w] = i
                 word_dicts['index_to_word'][i] = w
                 i += 1
-        self.logger.debug('Word dicts created successfully')
+        self.logger.info('Word dicts created successfully')
         return word_dicts
 
-    def build_vocab_vecs(self, tokenized_words: set) -> dict:
+    def save_vocab(self, vocab_bundle):
+        vocab_path = config('vocab_path')
+        embeddings_path = config('embeddings_path')
+        if Path(vocab_path).is_file() and Path(embeddings_path).is_file():
+            np.save(vocab_path, vocab_bundle['vocab'])
+            np.save(embeddings_path, vocab_bundle['embeddings'])
+        else:
+            self.logger.info('Cant save vocab. check vocab and embedding path in .ENV file')
+
+    def build_vocab_vecs(self, tokenized_words: list) -> dict:
         embeddings = [self.embeddings]
         vocab = {}
         self.word_count = 0
+        self.logger.info('Building vocabulary')
         for word in tokenized_words:
             if word not in vocab:
                 vocab[word] = self.word_count
@@ -125,9 +126,29 @@ class ToxicDataset(Dataset):
         build a vocab dictionary that maps words
         to glove representations
         """
-        tokenized_sample: set = tokenize_content(self.df['comment_text'])
-        vocab_bundle = self.build_vocab_vecs(tokenized_sample)
-        return vocab_bundle
+        vocab_loaded = self.load_vocab()
+        if not vocab_loaded:
+            tokenized_sample: list = tokenize_content(self.df['comment_text'])
+            vocab_bundle = self.build_vocab_vecs(tokenized_sample)
+            self.embeddings = vocab_bundle['embeddings']
+            self.vocab = vocab_bundle['vocab']
+            self.save_vocab(vocab_bundle)
+
+    def load_vocab(self) -> bool:
+        vocab_path = config('vocab_path')
+        embeddings_path = config('embeddings_path')
+        valid_v_path = Path(vocab_path).is_file()
+        valid_emb_path = Path(embeddings_path).is_file()
+        if valid_v_path and valid_emb_path:
+            self.logger.info('using pre-built vocab and embeddings')
+            self.vocab = np.load(vocab_path, allow_pickle=True).item()
+            self.embeddings = np.load(embeddings_path, allow_pickle=True)
+            self.unk_index = self.vocab['unk']
+            found_vocab = True
+        else:
+            self.logger.info('Vocab or embeddings path not specified')
+            found_vocab = False
+        return found_vocab
 
     def _vec(self, word):
         try:
@@ -155,7 +176,7 @@ class ToxicDataset(Dataset):
         labels = torch.tensor(
             sample_data[['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate']].values.astype(float),
             dtype=torch.float32)
-        text_padded = F.pad(text_indices, (0, self.max_text_len - text_len), value=0, mode='constant')
+        text_padded = nn.functional.pad(text_indices, (0, self.max_text_len - text_len), value=0, mode='constant')
         return text_padded, labels
 
 

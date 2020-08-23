@@ -5,8 +5,8 @@ import sys
 import click
 from toxic_sentiment.data_processors import ToxicDataset, Embedding
 from toxic_sentiment.session import Session
+from toxic_sentiment.models import BasicLstm
 from logging.config import fileConfig
-import logging
 
 fileConfig('logging.ini')
 
@@ -32,26 +32,11 @@ def setup(path: str):
 @main.command()
 @click.argument('data_path', type=str)
 @click.argument('glove_path', type=str)
-def train_model(data_path, text_col, glove_path, vocab_path):
-    train_logger = logging.getLogger('train_logger')
+def train_model(data_path, glove_path):
     toxic_dataset = ToxicDataset(data_path, glove_path)
-    session = Session()
-    session.train(toxic_dataset)
-    train_sampler, val_sampler, test_sampler = train_test_sampler(toxic_dataset, .8, .1, .1)
-    train_dataloader = DataLoader(toxic_dataset, batch_size, sampler=train_sampler)
-    val_dataloader = DataLoader(toxic_dataset, 128, sampler=val_sampler)
-    test_dataloader = DataLoader(toxic_dataset, 128, sampler=test_sampler)
-
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-    model = LstmNet(toxic_dataset.initial_embeddings, 200, device)
-
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.005)
-    BCELoss = nn.BCELoss()
-    losses = {}
-    num_epochs = 1
-    count = 0
-    session.train()
+    model = BasicLstm(toxic_dataset.embeddings, 200)
+    session = Session(model)
+    session.run(toxic_dataset, 32, 3)
     return 0
 
 

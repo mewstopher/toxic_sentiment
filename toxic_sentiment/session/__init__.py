@@ -12,7 +12,7 @@ class Session:
     losses = {}
     accuracies = {}
 
-    def __init__(self, model, num_epochs=3, loss=torch.nn.BCELoss, optimizer=None,
+    def __init__(self, model, loss=torch.nn.BCELoss, optimizer=None,
                  model_path=None, learning_rate=0.005,
                  save_path=None, save=False, load_model=False, custom_input=False):
         self.logger = logging.getLogger(__name__)
@@ -23,7 +23,6 @@ class Session:
         self.model = model
         self.optimizer = self.select_optimizer(optimizer, learning_rate)
         self.load_saved_model(load_model, model_path)
-        self.num_epochs = num_epochs
         self.loss = loss
         self.save = save
         self.save_path = save_path
@@ -52,7 +51,6 @@ class Session:
                              'have been made for you: '
                              'model: {}'
                              'loss: {}'
-                             'num epochs: {}'
                              'learning rate: '
                              'tran/val/test split: {}, {}, {}'
                              )
@@ -81,14 +79,14 @@ class Session:
         elif save and save_path:
             self.logger.info("saving model at: {}".format(save_path))
 
-    def train_epoch(self, train_dataloader, epoch):
+    def train_epoch(self, train_dataloader, epoch, loss):
         for data_sample in train_dataloader:
             for i in range(len(data_sample)):
                 data_sample[i] = data_sample[i].to(self.device)
             self.count += 1
             self.model.zero_grad()
             out = self.model(data_sample[0])
-            loss = self.loss(out, data_sample[1].float())
+            loss = loss(out, data_sample[1].float())
 
             loss.backward()
             self.optimizer.step()
@@ -104,15 +102,19 @@ class Session:
                 self.logger.info("loss: {} (at iteration {})".format(np.mean(self.losses[epoch]), self.count))
                 self.logger.info("accuracy: {} (at iteration {})".format(np.mean(self.accuracies[epoch]), self.count))
 
-    def train(self, dataset, batch_size):
-        sampled_data = train_test_sampler(dataset)
+    def train(self, dataset, batch_size, epochs):
+        sampled_data = train_test_sampler(dataset,
+                                          train_split=.8,
+                                          val_split=.1,
+                                          test_split=.1)
         train_dataloader = self.create_dataloader(dataset, batch_size, sampled_data[0])
         self.logger.info("beginning to train the machine")
-        for epoch in range(self.num_epochs):
+        loss = self.loss()
+        for epoch in range(epochs):
             self.losses[epoch] = []
             self.accuracies[epoch] = []
-            self.train_epoch(train_dataloader, epoch)
-            self.logger.info("Average training loss for epoch {}: {}".format(epoch, np.mean(losses[epoch])))
+            self.train_epoch(train_dataloader, epoch, loss)
+            self.logger.info("Average training loss for epoch {}: {}".format(epoch, np.mean(self.losses[epoch])))
             if self.save:
                 torch.save(self.model.state_dict(), self.save_path)
 
@@ -131,9 +133,9 @@ class Session:
         accuracy_list = [i for epoch in self.accuracies for i in self.accuracies[epoch]]
         return plt.plot(accuracy_list)
 
-    def run(self):
+    def run(self, dataset, batch_size, epochs):
         try:
-            self.train()
+            self.train(dataset, batch_size, epochs)
         except KeyboardInterrupt:
             print('\n' * 8)
             if self.save:

@@ -4,9 +4,9 @@ import torch
 
 class BasicLstm(nn.Module):
 
-    def __init__(self, embeddings, num_lstm_units, device, frozen=True, freeze_embeddings=True):
+    def __init__(self, embeddings, num_lstm_units, frozen=True, freeze_embeddings=True):
         super(BasicLstm, self).__init__()
-        self.device = device
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.embeddings = nn.Embedding.from_pretrained(
             torch.from_numpy(embeddings),
             freeze=freeze_embeddings)
@@ -17,10 +17,10 @@ class BasicLstm(nn.Module):
                               batch_first=True, bidirectional=True)
         self.dense1 = nn.Linear(800, 128)
         self.dense1_dropout = nn.Dropout(0.5)
-        self.dense_2 = nn.Linear(128, 64)
+        self.dense2 = nn.Linear(128, 64)
         self.dense2_dropout = nn.Dropout(0.5)
         self.output = nn.Linear(64,6)
-        self.to(device)
+        self.to(self.device)
 
     def init_hidden(self, batch_size):
         """
@@ -44,9 +44,9 @@ class BasicLstm(nn.Module):
         x1 = torch.mean(x, 1)
         x2, _ = torch.max(x, 1)
         x = torch.cat((x1, x2), 1)
-        x = nn.functional.relu(self.dense_1(x))
+        x = nn.functional.relu(self.dense1(x))
         x = self.dense1_dropout(x)
-        x = nn.functional.relu(self.dense_2(x))
+        x = nn.functional.relu(self.dense2(x))
         x = self.dense2_dropout(x)
         x = nn.functional.sigmoid(self.output(x))
         return x
