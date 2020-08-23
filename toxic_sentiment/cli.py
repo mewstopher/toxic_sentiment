@@ -17,6 +17,7 @@ def main(args=None):
     click.echo("Hello, what would you like to search for?")
     return 0
 
+
 @main.command()
 @click.option('-p', '--path', type=str)
 def setup(path: str):
@@ -35,6 +36,7 @@ def train_model(data_path, text_col, glove_path, vocab_path):
     train_logger = logging.getLogger('train_logger')
     toxic_dataset = ToxicDataset(data_path, glove_path)
     session = Session()
+    session.train(toxic_dataset)
     train_sampler, val_sampler, test_sampler = train_test_sampler(toxic_dataset, .8, .1, .1)
     train_dataloader = DataLoader(toxic_dataset, batch_size, sampler=train_sampler)
     val_dataloader = DataLoader(toxic_dataset, 128, sampler=val_sampler)

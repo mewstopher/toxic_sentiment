@@ -39,15 +39,15 @@ class BasicLstm(nn.Module):
         """
         batch_size = x.shape[0]
         self.hidden = self.init_hidden(batch_size)
-        X = self.embeddings(x).float()
-        X, self.hidden = self.bilstm(X, self.hidden)
-        X1 = torch.mean(X, 1)
-        X2, _ = torch.max(X, 1)
-        X = torch.cat((X1, X2), 1)
-        X = F.relu(self.dense_1(X))
-        X = self.dense1_dropout(X)
-        X = F.relu(self.dense_2(X))
-        X = self.dense2_dropout(X)
-        X = F.sigmoid(self.output(X))
-        return X
+        x = self.embeddings(x).float()
+        x, self.hidden = self.bilstm(x, self.hidden)
+        x1 = torch.mean(x, 1)
+        x2, _ = torch.max(x, 1)
+        x = torch.cat((x1, x2), 1)
+        x = nn.functional.relu(self.dense_1(x))
+        x = self.dense1_dropout(x)
+        x = nn.functional.relu(self.dense_2(x))
+        x = self.dense2_dropout(x)
+        x = nn.functional.sigmoid(self.output(x))
+        return x
 
