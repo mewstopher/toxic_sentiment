@@ -166,7 +166,7 @@ class ToxicDataset(Dataset):
         return self._vec('unk')
 
     def __len__(self):
-        return len(self.df.shape)
+        return len(self.df)
 
     def __getitem__(self, idx):
         sample_data = self.df.iloc[idx]

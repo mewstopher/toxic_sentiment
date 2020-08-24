@@ -14,7 +14,6 @@ fileConfig('logging.ini')
 @click.group()
 def main(args=None):
     """console script for toxic_sentiment."""
-    click.echo("Hello, what would you like to search for?")
     return 0
 
 
@@ -32,11 +31,13 @@ def setup(path: str):
 @main.command()
 @click.argument('data_path', type=str)
 @click.argument('glove_path', type=str)
-def train_model(data_path, glove_path):
+@click.argument('epochs', type=int, default=1)
+@click.option('-s', '--save', is_flag=True)
+def train_model(data_path, glove_path, save, epochs):
     toxic_dataset = ToxicDataset(data_path, glove_path)
     model = BasicLstm(toxic_dataset.embeddings, 200)
-    session = Session(model)
-    session.run(toxic_dataset, 32, 3)
+    session = Session(model, save=save)
+    session.run(toxic_dataset, epochs)
     return 0
 
 
