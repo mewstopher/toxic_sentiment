@@ -90,6 +90,9 @@ setup(
                                     'toxic_sentiment.models',
                                     'toxic_sentiment.session'],
                            exclude=["tests", "*.tests", "*tests.*", "tests.*"]),
+    package_dir={
+        'toxic_sentiment': 'toxic_sentiment'
+    },
     package_data={'': []},
     include_package_data=True,
     license='Other/Proprietary License',
