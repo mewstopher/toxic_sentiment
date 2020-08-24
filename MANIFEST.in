@@ -1,1 +1,2 @@
 recursive-include toxic_sentiment/scripts/ *
+include logging.ini
