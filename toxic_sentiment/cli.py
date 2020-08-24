@@ -8,7 +8,7 @@ from toxic_sentiment.session import Session
 from toxic_sentiment.models import BasicLstm
 from logging.config import fileConfig
 
-fileConfig('logging.ini')
+fileConfig('toxic_sentiment/logging.ini')
 
 
 @click.group()
