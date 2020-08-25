@@ -3,12 +3,14 @@
 """Console script for toxic_sentiment."""
 import sys
 import click
+from pathlib import Path
 from toxic_sentiment.data_processors import ToxicDataset, Embedding
 from toxic_sentiment.session import Session
 from toxic_sentiment.models import BasicLstm
 from logging.config import fileConfig
 
-fileConfig('toxic_sentiment/logging.ini')
+logging_config = Path.joinpath(Path(__file__).parent, 'logging.ini')
+fileConfig(logging_config)
 
 
 @click.group()
