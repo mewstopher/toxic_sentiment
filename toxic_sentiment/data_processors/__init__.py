@@ -18,6 +18,8 @@ class Constants(Enum):
     GLOVE_SCRIPT = 'scripts/get_embeddings.sh'
     UNK_WORD = 'unknown word'
     TEXT_COL = 'comment_text'
+    VOCAB_FILE = 'vocab.npy'
+    EMB_FILE = 'embedding.npy'
 
 
 class ToxicDataset(Dataset):
