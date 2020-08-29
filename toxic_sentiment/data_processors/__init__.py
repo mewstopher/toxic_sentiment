@@ -83,9 +83,11 @@ class ToxicDataset(Dataset):
     def save_vocab(self, vocab_bundle):
         vocab_path = config('vocab_path')
         embeddings_path = config('embeddings_path')
-        if Path(vocab_path).is_file() and Path(embeddings_path).is_file():
-            np.save(vocab_path, vocab_bundle['vocab'])
-            np.save(embeddings_path, vocab_bundle['embeddings'])
+        if Path(vocab_path).is_dir() and Path(embeddings_path).is_dir():
+            vocab_file = Path.joinpath(Path(embeddings_path), Constants.VOCAB_FILE.value)
+            embeddings_file = Path.joinpath(Path(embeddings_path), Constants.EMB_FILE.value)
+            np.save(vocab_file, vocab_bundle['vocab'])
+            np.save(embeddings_file, vocab_bundle['embeddings'])
         else:
             self.logger.info('Cant save vocab. check vocab and embedding path in .ENV file')
 
