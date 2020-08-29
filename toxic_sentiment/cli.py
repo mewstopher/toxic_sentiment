@@ -20,7 +20,7 @@ def main(args=None):
 
 
 @main.command()
-@click.option('-p', '--path', type=str)
+@click.argument('path', type=str)
 def setup(path: str):
     try:
         glove_embedder = Embedding()
