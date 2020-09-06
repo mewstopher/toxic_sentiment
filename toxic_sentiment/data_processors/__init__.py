@@ -27,6 +27,7 @@ class ToxicDataset(Dataset):
     def __init__(self, data_csv_path: str, glove_path: str):
         self.logger = logging.getLogger(__name__)
         self.logger.debug(f"{__name__} entered")
+        self.check_vocab_path()
         self.df = pd.read_csv(data_csv_path)
         self.text_col = Constants.TEXT_COL.value
         self.unknown_words = []
@@ -82,16 +83,30 @@ class ToxicDataset(Dataset):
         self.logger.info('Word dicts created successfully')
         return word_dicts
 
-    def save_vocab(self, vocab_bundle):
-        vocab_path = config('vocab_path')
-        embeddings_path = config('embeddings_path')
-        if Path(vocab_path).is_dir() and Path(embeddings_path).is_dir():
-            vocab_file = Path.joinpath(Path(embeddings_path), Constants.VOCAB_FILE.value)
-            embeddings_file = Path.joinpath(Path(embeddings_path), Constants.EMB_FILE.value)
-            np.save(vocab_file, vocab_bundle['vocab'])
-            np.save(embeddings_file, vocab_bundle['embeddings'])
-        else:
+    def check_vocab_path(self):
+        vocab_path = config('VOCAB_PATH')
+        embeddings_path = config('EMBEDDING_PATH')
+        if not Path(vocab_path).is_dir() or not Path(embeddings_path).is_dir():
             self.logger.info('Cant save vocab. check vocab and embedding path in .ENV file')
+            raise PathError
+        else:
+            self.logger.info('Using vocab path: {} and embedding path: {}'.format(vocab_path, embeddings_path))
+
+    @property
+    def get_vocab_file(self):
+        vocab_file = Path.joinpath(Path(config('VOCAB_PATH')), Constants.VOCAB_FILE.value)
+        return vocab_file
+
+    @property
+    def get_emb_file(self):
+        embeddings_file = Path.joinpath(Path(config('EMBEDDING_PATH')), Constants.EMB_FILE.value)
+        return embeddings_file
+
+    def unknown_handler(self, vocab):
+        self.unk_index = self.word_count
+        self.unk_encountered = True
+        vocab['unk'] = self.word_count
+        self.word_count += 1
 
     def build_vocab_vecs(self, tokenized_words: list) -> dict:
         embeddings = [self.embeddings]
@@ -106,18 +121,15 @@ class ToxicDataset(Dataset):
                 if vectorized_word != Constants.UNK_WORD.value:
                     embeddings.append(vectorized_word)
                     self.word_count += 1
-            elif not self.unk_encountered:
-                self.unk_index = self.word_count
-                embeddings.append(self._vec_unk)
-                self.unk_encountered = True
-                self.word_count += 1
-            else:
-                vocab[word] = self.unk_index
+                elif not self.unk_encountered:
+                    self.unknown_handler(vocab)
+                    embeddings.append(self._vec_unk)
+                else:
+                    vocab[word] = self.unk_index
             self.logger.debug('word count is: {}'.format(self.word_count))
         if not self.unk_encountered:
-            embeddings.append(self._vec('unk'))
-            self.unk_encountered = True
-            self.word_count += 1
+            self.unknown_handler(vocab)
+            embeddings.append(self._vec_unk)
             vocab[Constants.UNK_WORD.value] = self.word_count
         vocab_vectors = {
             'embeddings': embeddings,
@@ -136,17 +148,18 @@ class ToxicDataset(Dataset):
             vocab_bundle = self.build_vocab_vecs(tokenized_sample)
             self.embeddings = vocab_bundle['embeddings']
             self.vocab = vocab_bundle['vocab']
-            self.save_vocab(vocab_bundle)
+            np.save(self.get_vocab_file, vocab_bundle['vocab'])
+            np.save(self.get_emb_file, vocab_bundle['embeddings'])
 
     def load_vocab(self) -> bool:
-        vocab_path = config('vocab_path')
-        embeddings_path = config('embeddings_path')
-        valid_v_path = Path(vocab_path).is_file()
-        valid_emb_path = Path(embeddings_path).is_file()
+        vocab_path = config('VOCAB_PATH')
+        embeddings_path = config('EMBEDDING_PATH')
+        valid_v_path = self.get_vocab_file.is_file()
+        valid_emb_path = self.get_emb_file.is_file()
         if valid_v_path and valid_emb_path:
             self.logger.info('using pre-built vocab and embeddings')
-            self.vocab = np.load(vocab_path, allow_pickle=True).item()
-            self.embeddings = np.load(embeddings_path, allow_pickle=True)
+            self.vocab = np.load(self.get_vocab_file, allow_pickle=True).item()
+            self.embeddings = np.load(self.get_emb_file, allow_pickle=True)
             self.unk_index = self.vocab['unk']
             found_vocab = True
         else:
