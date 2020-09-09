@@ -16,6 +16,7 @@ ipykernel = "*"
 numpy = "*"
 matplotlib = "*"
 python-decouple = "*"
+tensorboard = "*"
 
 [requires]
 python_version = "3.8"

@@ -1,5 +1,6 @@
 from toxic_sentiment.data_processors.functions import train_test_sampler
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 from decouple import config, UndefinedValueError
 import matplotlib as plt
 import numpy as np
@@ -18,6 +19,7 @@ class Session:
                  custom_input=False):
         self.logger = logging.getLogger(__name__)
         self.logger.debug('{} entered'.format(__name__))
+        self.writer = SummaryWriter()
         self.user_input(custom_input)
         self.save_path = self.save_choice(save)
         self.device = self.get_device()
@@ -70,8 +72,10 @@ class Session:
         """
         if torch.cuda.is_available():
             device = "cuda:0"
+            self.logger.info('Using GPU')
         else:
             device = "cpu"
+            self.logger.info('Using CPU')
         return device
 
     def select_optimizer(self, optimizer, learning_rate):
@@ -101,6 +105,7 @@ class Session:
                 data_sample[i] = data_sample[i].to(self.device)
             self.count += 1
             self.model.zero_grad()
+            self.writer.add_graph(self.model, data_sample[0])
             out = self.model(data_sample[0])
             sample_loss = loss(out, data_sample[1].float())
 
@@ -117,6 +122,8 @@ class Session:
             if self.count % 10 == 0:
                 self.logger.info("loss: {} (at iteration {})".format(np.mean(self.losses[epoch]), self.count))
                 self.logger.info("accuracy: {} (at iteration {})".format(np.mean(self.accuracies[epoch]), self.count))
+        self.writer.add_scalar('Training loss', sample_loss.item(), epoch)
+        self.writer.add_scalar('Training Accuracy', accuracy, epoch)
 
     def train(self, dataset, batch_size, epochs):
         sampled_data = train_test_sampler(dataset,
@@ -156,6 +163,7 @@ class Session:
             batch_size = 32
         try:
             self.train(dataset, batch_size, epochs)
+
         except KeyboardInterrupt:
             print('\n' * 8)
             if self.save:

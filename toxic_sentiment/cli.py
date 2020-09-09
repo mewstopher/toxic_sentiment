@@ -35,11 +35,12 @@ def setup(path: str):
 @click.argument('glove_path', type=str)
 @click.argument('epochs', type=int, default=1)
 @click.option('-s', '--save', is_flag=True)
-def train_model(data_path, glove_path, save, epochs):
+@click.option('-l', '--load', is_flag=True)
+def train_model(data_path, glove_path, save, load, epochs):
     try:
         toxic_dataset = ToxicDataset(data_path, glove_path)
         model = BasicLstm(toxic_dataset.embeddings, 200)
-        session = Session(model, save=save)
+        session = Session(model, save=save, load_model=load)
         session.run(toxic_dataset, epochs)
     except Exception as exc:
         click.secho(str(exc), fg='red', err=True)
